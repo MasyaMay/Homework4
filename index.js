@@ -28,6 +28,7 @@ function Task(params){
 function TaskList(params) {
     this.innerHTML = params.innerHTML;
     this.id = params.id;
+    this.JSONName= params.JSONName;
     this.ul = document.getElementById(this.id);
     this.TaskClicked;
 };
@@ -40,21 +41,20 @@ TaskList.prototype.addTask = function(textTask){
     var checkbox = listItem.li.querySelector("button.checkbox");
     var deleteButton = listItem.li.querySelector("button.delete");
     var editButton = listItem.li.querySelector('button.edit');
-    var taskList = this;
     checkbox.onclick = function(){ 
-        taskList.Remove(listItem);
-        taskList.TaskClicked(listItem.text,taskList); 
-    };
-    deleteButton.addEventListener( "click" , ()=>{taskList.Remove(listItem);});
-    editButton.addEventListener( "click" , ()=>{taskList.EditTask(listItem);});
+        this.Remove(listItem);
+        this.TaskClicked(listItem.text,this); 
+    }.bind(this);
+    deleteButton.addEventListener( "click" , ()=>{this.Remove(listItem);});
+    editButton.addEventListener( "click" , ()=>{this.EditTask(listItem);});
     this.ul.appendChild(listItem.li); 
-    save();
+    this.Save();
 };
 
 
 TaskList.prototype.Remove = function(listItem){
     this.ul.removeChild(listItem.li);
-    save();
+    this.Save();
 }
 
 TaskList.prototype.EditTask = function(listItem){
@@ -65,9 +65,10 @@ TaskList.prototype.EditTask = function(listItem){
     var editClass = listItem.li.classList.contains('editTask');
     if (editClass) {
         label.innerText = input.value;
+        listItem.text=input.value;
         editButton.className = "material-icons edit";
         editButton.innerHTML = "<i class='material-icons'>edit</i>";
-        save();
+        this.Save();
     } else {
         input.value = label.innerText;
         editButton.className = "material-icons save";
@@ -76,42 +77,34 @@ TaskList.prototype.EditTask = function(listItem){
     listItem.li.classList.toggle('editTask');
 }
 
-var unfinishedTasks = document.getElementById('unfinished-tasks');
-var finishedTasks = document.getElementById('finished-tasks');
-
-function save() {
-    var unfinishedTasksArr = [];
-    for (var i = 0; i < unfinishedTasks.children.length; i++) {
-        unfinishedTasksArr.push(unfinishedTasks.children[i].getElementsByTagName('label')[0].innerText);
+TaskList.prototype.Save = function() {
+    var TasksArr = [];
+    for (var i = 0; i < this.ul.children.length; i++) {
+        TasksArr.push(this.ul.children[i].getElementsByTagName('label')[0].innerText);
     }
-    var finishedTasksArr = [];
-    for (var i = 0; i < finishedTasks.children.length; i++) {
-        finishedTasksArr.push(finishedTasks.children[i].getElementsByTagName('label')[0].innerText);
-    }
-    // localStorage.removeItem('todo');
-    localStorage.setItem('todo', JSON.stringify({
-        unfinishedTasks: unfinishedTasksArr,
-        finishedTasks: finishedTasksArr
+    localStorage.setItem(this.JSONName, JSON.stringify({
+        Tasks: TasksArr
     }));
 }
 
 function Vidget() {
     this.UnfinishedTasks = new TaskList({
         id: "unfinished-tasks",
-        innerHTML: "<i class='material-icons'>check_box_outline_blank</i>"
+        innerHTML: "<i class='material-icons'>check_box_outline_blank</i>",
+        JSONName: "unfinishedTasks"
     });
     this.FinishedTasks = new TaskList({
         id: "finished-tasks",
-        innerHTML: "<i class='material-icons'>check_box</i>"
+        innerHTML: "<i class='material-icons'>check_box</i>",
+        JSONName: "finishedTasks"
     });
-    var vidget = this;
-    var func=function(text, taskList){
-        if(taskList == vidget.UnfinishedTasks)
-            vidget.FinishedTasks.addTask(text);
-        else vidget.UnfinishedTasks.addTask(text);
-    }
-    this.UnfinishedTasks.TaskClicked = func;
-    this.FinishedTasks.TaskClicked=func;
+    var TaskClickedList = function(text, taskList){
+        if(taskList == this.UnfinishedTasks)
+            this.FinishedTasks.addTask(text);
+        else this.UnfinishedTasks.addTask(text);
+    }.bind(this);
+    this.UnfinishedTasks.TaskClicked = TaskClickedList;
+    this.FinishedTasks.TaskClicked = TaskClickedList;
 
     var addButton = document.getElementById("add");
     var newTask = document.getElementById("new-task");
@@ -122,12 +115,15 @@ function Vidget() {
         }   
     });
 
-    var data=JSON.parse(localStorage.getItem('todo'));
-    for(var i=0; i<data.unfinishedTasks.length;i++){
-        this.UnfinishedTasks.addTask(data.unfinishedTasks[i]);
+    var data=JSON.parse(localStorage.getItem(this.UnfinishedTasks.JSONName));
+    if(data)
+    for(var i=0; i<data.Tasks.length;i++){
+        this.UnfinishedTasks.addTask(data.Tasks[i]);
     }
-    for(var i=0; i<data.finishedTasks.length; i++){
-        this.FinishedTasks.addTask(data.finishedTasks[i]);
+    data=JSON.parse(localStorage.getItem(this.FinishedTasks.JSONName));
+    if(data)
+    for(var i=0; i<data.Tasks.length; i++){
+        this.FinishedTasks.addTask(data.Tasks[i]);
     }
 }
 
